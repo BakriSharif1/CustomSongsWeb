@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
