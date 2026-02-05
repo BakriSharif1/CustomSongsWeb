@@ -125,6 +125,7 @@ model Order {
   details         OrderDetails?
   payments        Payment[]
   events          EventLog[]
+  supportMessages SupportMessage[]
 }
 
 model OrderDetails {
