@@ -1,0 +1,181 @@
+// Prisma schema for BVKRI Songs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum PackageType {
+  BASIC
+  PLUS
+  PREMIUM
+}
+
+enum OrderStatus {
+  DRAFT
+  AWAITING_PAYMENT
+  RECEIVED
+  WRITING
+  RECORDING
+  MIXING
+  DELIVERED
+  CLOSED
+}
+
+model User {
+  id            String           @id @default(cuid())
+  name          String?
+  email         String?          @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole         @default(CUSTOMER)
+  createdAt     DateTime         @default(now())
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  support       SupportMessage[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Artist {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  bio       String
+  genres    String[]
+  tags      String[]
+  avatarUrl String
+  createdAt DateTime @default(now())
+  samples   SampleSong[]
+  orders    Order[]
+}
+
+model SampleSong {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  artistId    String?
+  genre       String
+  mood        String
+  durationSec Int
+  audioUrl    String
+  coverUrl    String
+  description String
+  createdAt   DateTime @default(now())
+
+  artist Artist? @relation(fields: [artistId], references: [id])
+}
+
+model Order {
+  id                String       @id @default(cuid())
+  userId            String
+  packageType       PackageType
+  priceCents        Int
+  status            OrderStatus  @default(DRAFT)
+  preferredArtistId String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id])
+  preferredArtist Artist?      @relation(fields: [preferredArtistId], references: [id])
+  details         OrderDetails?
+  payments        Payment[]
+  events          EventLog[]
+}
+
+model OrderDetails {
+  orderId            String   @id
+  occasion           String
+  recipientName      String
+  relationship       String
+  storyText          String
+  mustIncludeLines   String
+  pronunciationNotes String
+  genre              String
+  mood               String
+  tempo              String
+  vocalGender        String
+  language           String
+  explicit           Boolean
+  addOns             Json
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id                     String   @id @default(cuid())
+  orderId                String
+  stripeCheckoutId       String
+  stripePaymentIntentId  String?
+  amountCents            Int
+  currency               String
+  status                 String
+  createdAt              DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  orderId   String
+  message   String
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  orderId   String?
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id])
+}
